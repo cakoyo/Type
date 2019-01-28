@@ -27,7 +27,6 @@ import static org.bukkit.Material.*;
 
 import java.util.EnumMap;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.bukkit.Material;
 
 public enum Type {
@@ -101,20 +100,27 @@ public enum Type {
     }
     
     private Type(Material... materials) {
-        predicate = TypeUnit.of((in) -> ArrayUtils.contains(materials, in));
+        predicate = TypeUnit.of((in) -> contains(materials, in));
         for (Material material : materials)
             TypeUnit.reverseMap.put(material, this);
     }
     
-    public boolean is(Material material) {
+    private static final boolean contains(Material[] array, Material dest) {
+        for (Material material : array)
+            if (material == dest)
+                return true;
+        return false;
+    }
+    
+    public final boolean is(Material material) {
         return predicate.is(material);
     }
     
-    public static Type of(Material material) {
+    public final static Type of(Material material) {
         return TypeUnit.reverseMap.getOrDefault(material, TYPE_OVERFLOW);
     }
     
-    public static class TypeUnit implements TrueType {
+    public static final class TypeUnit implements TrueType {
         private static final EnumMap<Material, Type> reverseMap = new EnumMap<Material, Type>(Material.class);
         private final TrueType predicate;
         
@@ -122,12 +128,12 @@ public enum Type {
             this.predicate = predicate;
         }
         
-        private static TrueType of(TrueType predicate) {
+        private final static TrueType of(TrueType predicate) {
             return new TypeUnit(predicate);
         }
         
         @Override
-        public boolean is(Material material) {
+        public final boolean is(Material material) {
             return predicate.is(material);
         }
     }
