@@ -30,6 +30,10 @@ import java.util.EnumMap;
 import org.bukkit.Material;
 
 public enum Type {
+    /**
+     * Traditional types.
+     */
+    
     DOUBLE_PLANT(LARGE_FERN, LILAC, PEONY, ROSE_BUSH, SUNFLOWER, TALL_GRASS),
     
     /**
@@ -38,11 +42,6 @@ public enum Type {
     GRASS(Material.GRASS, GRASS_BLOCK),
     
     LEAVES(JUNGLE_LEAVES, OAK_LEAVES, SPRUCE_LEAVES, BIRCH_LEAVES, DARK_OAK_LEAVES, ACACIA_LEAVES),
-    
-    /**
-     * <code>FERN</code><br>This is an alias.
-     */
-    LONG_GRASS(FERN),
     
     DIRT(Material.DIRT, COARSE_DIRT, PODZOL),
     
@@ -55,7 +54,20 @@ public enum Type {
      */
     STONE(Material.STONE, GRANITE, DIORITE, ANDESITE),
     
+    /**
+     * New types.
+     */
+    
     POLISHED_STONE(SMOOTH_STONE, POLISHED_GRANITE, POLISHED_DIORITE, POLISHED_ANDESITE),
+    
+    /**
+     * Aliases and references.
+     */
+    
+    /**
+     * <code>FERN</code><br>This is an alias.
+     */
+    LONG_GRASS(FERN),
     
     /**
      * <code>DANDELION</code><br>This is an alias.
@@ -90,7 +102,31 @@ public enum Type {
     /**
      * This type have not been covered yet.
      */
-    TYPE_OVERFLOW;
+    OTHERS;
+    
+    /**
+     * Public area.
+     */
+    
+    /**
+     * @param material
+     * @return
+     */
+    public final boolean is(Material material) {
+        return predicate.is(material);
+    }
+    
+    /**
+     * @param material
+     * @return
+     */
+    public final static Type of(Material material) {
+        return TypeUnit.reverseMap.getOrDefault(material, OTHERS);
+    }
+    
+    /**
+     * Hidden infrastructures.
+     */
     
     private final TrueType predicate;
     
@@ -112,15 +148,12 @@ public enum Type {
         return false;
     }
     
-    public final boolean is(Material material) {
-        return predicate.is(material);
+    @FunctionalInterface
+    private interface TrueType {
+        boolean is(Material t);
     }
     
-    public final static Type of(Material material) {
-        return TypeUnit.reverseMap.getOrDefault(material, TYPE_OVERFLOW);
-    }
-    
-    public static final class TypeUnit implements TrueType {
+    private static final class TypeUnit implements TrueType {
         private static final EnumMap<Material, Type> reverseMap = new EnumMap<Material, Type>(Material.class);
         private final TrueType predicate;
         
