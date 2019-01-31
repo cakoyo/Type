@@ -28,11 +28,16 @@ import static org.bukkit.Material.*;
 import java.lang.annotation.Documented;
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.Map;
+import java.util.Set;
 
 import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Comparator;
 import org.bukkit.block.data.type.Comparator.Mode;
+
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 public enum Type {
     /**
@@ -79,6 +84,8 @@ public enum Type {
     
     WATER(Material.WATER),
     
+    ORE(COAL_ORE, IRON_ORE, LAPIS_ORE, GOLD_ORE, EMERALD_ORE, DIAMOND_ORE),
+    
     /**
      * New types.
      */
@@ -86,6 +93,10 @@ public enum Type {
     POLISHED_STONE(SMOOTH_STONE, POLISHED_GRANITE, POLISHED_DIORITE, POLISHED_ANDESITE),
     
     WOOD(BIRCH_WOOD, JUNGLE_WOOD, OAK_WOOD, SPRUCE_WOOD, ACACIA_WOOD, DARK_OAK_WOOD),
+    
+    PICKAXE(WOODEN_PICKAXE, IRON_PICKAXE, GOLDEN_PICKAXE, DIAMOND_PICKAXE),
+    
+    LIGHT_EMITTER(TORCH, REDSTONE_TORCH, GLOWSTONE, SEA_LANTERN, JACK_O_LANTERN, END_ROD, ENDER_CHEST),
     
     /**
      * Aliases.
@@ -136,7 +147,7 @@ public enum Type {
     OTHERS,
     
     /**
-     * This type is unexpected.
+     * This type is not what you wanted.
      */
     UNWANTED;
     
@@ -165,7 +176,7 @@ public enum Type {
     
     @Nondata
     public final static Type of(Material material) {
-        EnumSet<Type> types = TypeUnit.reverseMap.get(material);
+        Set<Type> types = TypeUnit.reverseMap.get(material);
         
         switch (types.size()) {
             case 0:
@@ -194,7 +205,7 @@ public enum Type {
     }
     
     public final static Type of(BlockData data) {
-        EnumSet<Type> types = TypeUnit.reverseMap.get(data.getMaterial());
+        Set<Type> types = TypeUnit.reverseMap.get(data.getMaterial());
         
         if (types == null)
             return OTHERS;
@@ -211,6 +222,10 @@ public enum Type {
         return optimum;
     }
     
+    /**
+     * You may will get an unaccurate or unwanted result.
+     * @see UNWANTED
+     */
     @Documented
     public static @interface Nondata {
     }
@@ -245,14 +260,23 @@ public enum Type {
             reverseType(material);
     }
 
-    private void reverseType(Material key) {
-        EnumSet<Type> types = TypeUnit.reverseMap.get(key);
+    private final void reverseType(Material key) {
+        Set<Type> types = TypeUnit.reverseMap.get(key);
         
         if (types == null) {
-            TypeUnit.reverseMap.put(key, EnumSet.of(this));
+            TypeUnit.reverseMap.put(key, Sets.newHashSet(this));
         } else {
             types.add(this);
         }
+    }
+    
+    private final void preTouch() {
+    }
+    
+    static {
+        for (Type type : Type.values())
+            type.preTouch();
+        TypeUnit.reverseMap = Maps.transformValues(TypeUnit.reverseMap, (types) -> EnumSet.copyOf(types));
     }
 
     private static final boolean contains(Material[] array, Material dest) {
@@ -267,9 +291,9 @@ public enum Type {
     private interface TrueType<T> {
         boolean is(T material);
     }
-    
+
     private static final class TypeUnit {
-        private static final EnumMap<Material, EnumSet<Type>> reverseMap = new EnumMap<Material, EnumSet<Type>>(Material.class);
+        private static Map<Material, Set<Type>> reverseMap = new EnumMap<Material, Set<Type>>(Material.class);
         
         private final static <T> TrueType<T> of(TrueType<T> predicate) {
             return predicate;

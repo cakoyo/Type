@@ -3,3 +3,4 @@ main: moe.kira.type.TypePlugin
 version: 0.1
 api-version: 1.13
 author: Sotr
+load: STARTUP
