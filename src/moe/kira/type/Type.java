@@ -33,6 +33,7 @@ import java.util.Set;
 
 import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.Levelled;
 import org.bukkit.block.data.type.Comparator;
 import org.bukkit.block.data.type.Comparator.Mode;
 
@@ -76,13 +77,15 @@ public enum Type {
      * Data types.
      */
     
-    REDSTONE_COMPARATOR_ON(COMPARATOR, (data) -> ((Comparator) data).getMode() == Mode.COMPARE),
+    REDSTONE_COMPARATOR_ON(Material.COMPARATOR, (data) -> ((Comparator) data).getMode() == Mode.COMPARE),
     
-    REDSTONE_COMPARATOR_OFF(COMPARATOR, (data) -> ((Comparator) data).getMode() == Mode.SUBTRACT),
+    REDSTONE_COMPARATOR_OFF(Material.COMPARATOR, (data) -> ((Comparator) data).getMode() == Mode.SUBTRACT),
     
-    STATIONARY_WATER(Material.WATER),
+    FALLING_WATER(Material.WATER, (data) -> ((Levelled) data).getLevel() > 7),
     
-    WATER(Material.WATER),
+    STATIONARY_WATER(Material.WATER, (data) -> ((Levelled) data).getLevel() < 8),
+    
+    WATER_SOURCE(Material.WATER, (data) -> ((Levelled) data).getLevel() == 0),
     
     ORE(COAL_ORE, IRON_ORE, LAPIS_ORE, GOLD_ORE, EMERALD_ORE, DIAMOND_ORE),
     
@@ -96,7 +99,7 @@ public enum Type {
     
     PICKAXE(WOODEN_PICKAXE, IRON_PICKAXE, GOLDEN_PICKAXE, DIAMOND_PICKAXE),
     
-    LIGHT_EMITTER(TORCH, REDSTONE_TORCH, GLOWSTONE, SEA_LANTERN, JACK_O_LANTERN, END_ROD, ENDER_CHEST),
+    LIGHT_EMITTER(TORCH, REDSTONE_TORCH, GLOWSTONE, SEA_LANTERN, JACK_O_LANTERN, Material.END_ROD, ENDER_CHEST, LAVA_BUCKET),
     
     /**
      * Aliases.
@@ -136,6 +139,71 @@ public enum Type {
      * <code>GRAVEL</code><br>This is an alias.
      */
     GRAVEL(Material.GRAVEL),
+    
+    /**
+     * <code>WATER</code><br>This is an alias.
+     */
+    WATER(Material.WATER, Attribute.ENVELOP),
+    
+    /**
+     * <code>COMPARATOR</code><br>This is an alias.
+     */
+    COMPARATOR(Material.COMPARATOR, Attribute.ENVELOP),
+    
+    /**
+     * <code>OBSERVER</code><br>This is an alias.
+     */
+    OBSERVER(Material.OBSERVER),
+    
+    /**
+     * <code>IRON_BARS</code><br>This is an alias.
+     */
+    IRON_FENCE(IRON_BARS),
+    
+    /**
+     * <code>END_ROD</code><br>This is an alias.
+     */
+    END_ROD(Material.END_ROD),
+    
+    /**
+     * <code>FIRE</code><br>This is an alias.
+     */
+    FIRE(Material.FIRE),
+    
+    /**
+     * <code>CAULDRON</code><br>This is an alias.
+     */
+    CAULDRON(Material.CAULDRON),
+    
+    /**
+     * <code>COBBLESTONE_WALL</code><br>This is an alias.
+     */
+    COBBLE_WALL(COBBLESTONE_WALL),
+    
+    /**
+     * <code>OBSIDIAN</code><br>This is an alias.
+     */
+    OBSIDIAN(Material.OBSIDIAN),
+    
+    /**
+     * <code>FURNACE</code><br>This is an alias.
+     */
+    FURNACE(Material.FURNACE),
+    
+    /**
+     * <code>STICKY_PISTON</code><br>This is an alias.
+     */
+    STICKY_PISTON_BASE(Material.STICKY_PISTON),
+    
+    /**
+     * <code>PISTON</code><br>This is an alias.
+     */
+    PISTON_BASE(Material.PISTON),
+    
+    /**
+     * <code>LEVER</code><br>This is an alias.
+     */
+    LEVER(Material.LEVER),
     
     /**
      * Bad types.
@@ -188,6 +256,24 @@ public enum Type {
         }
     }
     
+    @Nondata
+    public final static Type of(Material material, Attribute attribute) {
+        Set<Type> types = TypeUnit.reverseMap.get(material);
+        
+        switch (types.size()) {
+            case 0:
+                return OTHERS;
+            case 1:
+                Type silverLining = types.iterator().next();
+                return silverLining.attribute == attribute ? silverLining : UNWANTED;
+            default:
+                for (Type type : types)
+                    if (type.attribute == attribute)
+                        return type;
+                return Type.UNWANTED;
+        }
+    }
+    
     public final static boolean is(BlockData data, Type type) {
         return type.is(data);
     }
@@ -218,8 +304,20 @@ public enum Type {
                 else if (type.hasData)
                         optimum = type;
         
-        assert optimum != UNWANTED : "Unexpected Type: " + data.getAsString();
         return optimum;
+    }
+    
+    public final static Type of(BlockData data, Attribute attribute) {
+        Set<Type> types = TypeUnit.reverseMap.get(data.getMaterial());
+        
+        if (types == null)
+            return OTHERS;
+        
+        for (Type type : types)
+            if (type.attribute == attribute && type.is(data))
+                return type;
+        
+        return UNWANTED;
     }
     
     /**
@@ -230,9 +328,17 @@ public enum Type {
     public static @interface Nondata {
     }
     
+    public enum Attribute {
+        MAPPING,
+        ENVELOP,
+        UNWANTED;
+    }
+    
     /**
      * Hidden infrastructures.
      */
+    
+    private final Attribute attribute;
 
     private final TrueType<Material> predicate;
 
@@ -240,20 +346,27 @@ public enum Type {
     private TrueType<BlockData> predicateData;
 
     private Type() {
+        attribute = Attribute.UNWANTED;
         predicate = TypeUnit.of((in) -> false);
     }
 
     private Type(Material material, TrueType<BlockData> dataPredicate) {
-        this(material);
+        this(material, Attribute.MAPPING);
         predicateData = dataPredicate;
     }
-
+    
     private Type(Material material) {
+        this(material, Attribute.MAPPING);
+    }
+    
+    private Type(Material material, Attribute typeAttribute) {
+        attribute = typeAttribute;
         predicate = TypeUnit.of((in) -> material == in);
         reverseType(material);
     }
 
     private Type(Material... materials) {
+        attribute = Attribute.ENVELOP;
         predicate = TypeUnit.of((in) -> contains(materials, in));
         
         for (Material material : materials)
@@ -276,6 +389,7 @@ public enum Type {
     static {
         for (Type type : Type.values())
             type.preTouch();
+        
         TypeUnit.reverseMap = Maps.transformValues(TypeUnit.reverseMap, (types) -> EnumSet.copyOf(types));
     }
 
