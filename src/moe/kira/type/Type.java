@@ -42,10 +42,6 @@ import com.google.common.collect.Sets;
 
 public enum Type {
     /**
-     * Multiple mappings to one material is unsupported.
-     */
-    
-    /**
      * Traditional types.
      */
     
@@ -287,7 +283,7 @@ public enum Type {
     }
     
     public final boolean is(BlockData data) {
-        return predicate.is(data.getMaterial()) ? (hasData ? predicateData.is(data) : false) : false;
+        return predicate.is(data.getMaterial()) ? (hasData ? predicateData.is(data) : true) : false;
     }
     
     public final static Type of(BlockData data) {
